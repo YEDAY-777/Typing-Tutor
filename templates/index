@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python打字游戏 - 自由选择文章</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-keyboard"></i> Python打字游戏</h1>
+            <p class="subtitle">自由选择文章，提升打字技能</p>
+        </header>
+
+        <main>
+            <div class="game-container">
+                <!-- 文章选择区域 -->
+                <div class="article-selection" id="article-selection">
+                    <h3><i class="fas fa-book-open"></i> 选择练习文章</h3>
+
+                    <div class="selection-controls">
+                        <div class="category-selector">
+                            <label for="category-select"><i class="fas fa-folder"></i> 选择分类:</label>
+                            <select id="category-select" class="category-dropdown">
+                                <option value="">所有分类</option>
+                                <option value="编程技术">编程技术</option>
+                                <option value="科技资讯">科技资讯</option>
+                                <option value="生活常识">生活常识</option>
+                                <option value="文学名句">文学名句</option>
+                                <option value="英语练习">英语练习</option>
+                                <option value="自定义">自定义</option>
+                            </select>
+
+                            <button id="refresh-articles-btn" class="btn btn-small">
+                                <i class="fas fa-sync-alt"></i> 刷新
+                            </button>
+                        </div>
+
+                        <div class="article-list-container" id="article-list-container">
+                            <div class="article-stats">
+                                <span id="article-count">0</span> 篇文章
+                                <span class="divider">|</span>
+                                <span id="total-chars">0</span> 总字符
+                            </div>
+
+                            <div class="article-list" id="article-list">
+                                <!-- 文章列表将通过JavaScript动态加载 -->
+                                <div class="loading-articles">
+                                    <i class="fas fa-spinner fa-spin"></i> 加载文章中...
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="custom-article">
+                            <h4><i class="fas fa-edit"></i> 自定义文章</h4>
+                            <textarea
+                                id="custom-text"
+                                class="custom-textarea"
+                                placeholder="在这里输入你想要练习的自定义文章..."
+                                rows="4"
+                            ></textarea>
+                            <div class="custom-controls">
+                                <div class="char-count">
+                                    字符数: <span id="char-count">0</span>
+                                </div>
+                                <button id="use-custom-btn" class="btn btn-small btn-primary">
+                                    <i class="fas fa-check"></i> 使用此文章
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="selected-article-info" id="selected-article-info">
+                            <div class="selected-info">
+                                <strong><i class="fas fa-check-circle"></i> 已选择:</strong>
+                                <span id="selected-category">随机</span> -
+                                <span id="selected-length">0</span> 字符
+                            </div>
+                            <div class="selected-preview" id="selected-preview">
+                                未选择文章，将使用随机文章
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-info">
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-label">进度</div>
+                            <div class="stat-value" id="progress">0%</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">错误</div>
+                            <div class="stat-value" id="errors">0</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">速度</div>
+                            <div class="stat-value" id="speed">0</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">准确率</div>
+                            <div class="stat-value" id="accuracy">0%</div>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <button id="start-btn" class="btn btn-primary">
+                            <i class="fas fa-play"></i> 开始游戏
+                        </button>
+                        <button id="reset-btn" class="btn btn-secondary" disabled>
+                            <i class="fas fa-redo"></i> 重新开始
+                        </button>
+                        <button id="random-btn" class="btn btn-info">
+                            <i class="fas fa-random"></i> 随机文章
+                        </button>
+                        <button id="hint-btn" class="btn btn-info">
+                            <i class="fas fa-lightbulb"></i> 提示
+                        </button>
+                    </div>
+                </div>
+
+                <div class="text-display">
+                    <div class="text-header">
+                        <div class="text-category" id="current-category">
+                            <i class="fas fa-tag"></i> 分类: <span>未开始</span>
+                        </div>
+                        <div class="text-length">
+                            <i class="fas fa-ruler"></i> 长度: <span id="text-length">0</span> 字符
+                        </div>
+                    </div>
+
+                    <div id="target-text" class="target-text">
+                        请先选择文章，然后点击"开始游戏"按钮
+                    </div>
+
+                    <textarea
+                        id="input-area"
+                        class="input-area"
+                        placeholder="在这里输入上面的文本..."
+                        rows="5"
+                        disabled
+                    ></textarea>
+
+                    <div class="timer">
+                        <i class="fas fa-clock"></i> 时间: <span id="timer">0.00</span> 秒
+                    </div>
+                </div>
+
+                <div class="results hidden" id="results">
+                    <h2><i class="fas fa-trophy"></i> 游戏完成!</h2>
+                    <div class="result-stats">
+                        <div class="result-stat">
+                            <div class="result-label">分类</div>
+                            <div class="result-value" id="final-category">随机</div>
+                        </div>
+                        <div class="result-stat">
+                            <div class="result-label">总用时</div>
+                            <div class="result-value" id="final-time">0.00 秒</div>
+                        </div>
+                        <div class="result-stat">
+                            <div class="result-label">打字速度</div>
+                            <div class="result-value" id="final-speed">0 字/分钟</div>
+                        </div>
+                        <div class="result-stat">
+                            <div class="result-label">准确率</div>
+                            <div class="result-value" id="final-accuracy">0%</div>
+                        </div>
+                    </div>
+
+                    <div class="result-actions">
+                        <button id="share-btn" class="btn btn-success">
+                            <i class="fas fa-share-alt"></i> 分享成绩
+                        </button>
+                        <button id="play-again-btn" class="btn btn-primary">
+                            <i class="fas fa-play-circle"></i> 再玩一次
+                        </button>
+                        <button id="new-article-btn" class="btn btn-secondary">
+                            <i class="fas fa-book"></i> 选择新文章
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="leaderboard">
+                <h2><i class="fas fa-crown"></i> 排行榜</h2>
+                <div class="table-container">
+                    <table id="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>玩家</th>
+                                <th>速度</th>
+                                <th>准确率</th>
+                                <th>分类</th>
+                                <th>日期</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                            <!-- 排行榜数据将通过JavaScript动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="refresh-leaderboard">
+                    <button id="refresh-leaderboard-btn" class="btn btn-secondary">
+                        <i class="fas fa-sync-alt"></i> 刷新排行榜
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>使用 Python Flask 构建 | 版权所有 &copy; 2023</p>
+            <p class="instructions">
+                游戏说明: 选择或输入想要练习的文章，然后开始游戏。在文本框中尽可能准确快速地输入上方显示的文本。
+            </p>
+        </footer>
+    </div>
+
+    <!-- 提示模态框 -->
+    <div id="hint-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-lightbulb"></i> 打字技巧</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ul>
+                    <li>保持正确的手位：左手放在ASDF键，右手放在JKL;键</li>
+                    <li>打字时尽量不看键盘，这有助于提高打字速度</li>
+                    <li>注意准确性比速度更重要，先准确再提速</li>
+                    <li>练习常用单词和短语，提高肌肉记忆</li>
+                    <li>定期休息，避免手部疲劳和重复性劳损</li>
+                    <li>使用所有手指打字，而不是只用几个手指</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='game.js') }}"></script>
+</body>
+</html>
