@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const hintBtn = document.getElementById('hint-btn');
     const inputArea = document.getElementById('input-area');
     const targetText = document.getElementById('target-text');
+    const backToSelectionBtn = document.getElementById('back-to-selection-btn');
 
     // 统计显示
     const progressElement = document.getElementById('progress');
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const finalSpeedElement = document.getElementById('final-speed');
     const finalAccuracyElement = document.getElementById('final-accuracy');
     const finalCategory = document.getElementById('final-category');
+    const finalErrorsElement = document.getElementById('final-errors');
     const playAgainBtn = document.getElementById('play-again-btn');
     const shareBtn = document.getElementById('share-btn');
 
@@ -86,6 +88,21 @@ document.addEventListener('DOMContentLoaded', function() {
     resetBtn.addEventListener('click', resetGame);
     hintBtn.addEventListener('click', showHintModal);
     inputArea.addEventListener('input', handleInput);
+    
+    // 返回选择按钮
+    if (backToSelectionBtn) {
+        backToSelectionBtn.addEventListener('click', function() {
+            if (gameState.isActive) {
+                if (confirm('游戏正在进行中，确定要返回选择新文章吗？当前进度将丢失。')) {
+                    resetGame();
+                    showArticleSelection();
+                }
+            } else {
+                resetGame();
+                showArticleSelection();
+            }
+        });
+    }
 
     inputArea.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !gameState.isActive) {
@@ -95,18 +112,82 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 事件监听器 - 结果相关
-    playAgainBtn.addEventListener('click', function() {
-        resetGame();
-        setTimeout(() => {
-            if (gameState.selectedArticle) {
-                startGame();
-            } else {
+    // 更新"选择新文章"按钮事件
+    newArticleBtn.addEventListener('click', function() {
+        console.log('点击"选择新文章"');
+        
+        // 如果游戏正在进行，先确认
+        if (gameState.isActive) {
+            if (confirm('游戏正在进行中，确定要选择新文章吗？当前进度将丢失。')) {
+                resetGame();
                 showArticleSelection();
             }
-        }, 100);
+        } else {
+            resetGame();
+            showArticleSelection();
+        }
     });
-    
+
+    // 更新"再玩一次"按钮事件
+    playAgainBtn.addEventListener('click', function() {
+        console.log('点击"再玩一次"');
+        
+        // 如果当前没有选中的文章，显示选择区域
+        if (!gameState.selectedArticle) {
+            showArticleSelection();
+            return;
+        }
+        
+        // 否则重置并重新开始当前文章
+        resetGameUI();
+        
+        // 设置目标文本
+        if (gameState.originalText) {
+            targetText.textContent = gameState.originalText;
+        }
+        
+        // 开始游戏
+        setTimeout(() => {
+            startGame();
+        }, 300);
+    });
+
+    // 更新"随机文章"按钮事件
+    randomBtn.addEventListener('click', function() {
+        console.log('点击"随机文章"');
+        
+        // 如果游戏正在进行，先确认
+        if (gameState.isActive) {
+            if (confirm('游戏正在进行中，确定要切换到随机文章吗？当前进度将丢失。')) {
+                resetGame();
+                selectRandomArticle();
+            }
+        } else {
+            selectRandomArticle();
+        }
+    });
+
+    // 事件监听器 - 结果相关
+    playAgainBtn.addEventListener('click', function() {
+        // 先重置游戏
+        resetGame();
+        
+        // 隐藏结果面板
+        resultsElement.classList.add('hidden');
+        resultsElement.style.display = 'none';
+        
+        // 如果有选中的文章，直接开始
+        if (gameState.selectedArticle && gameState.selectedArticle.text) {
+            // 重新开始相同的文章
+            setTimeout(() => {
+                startGame();
+            }, 300);
+        } else {
+            // 如果没有选中的文章，显示选择区域
+            showArticleSelection();
+        }
+    });
+
     shareBtn.addEventListener('click', shareResults);
 
     // 事件监听器 - 排行榜相关
@@ -124,11 +205,72 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 显示文章选择区域
     function showArticleSelection() {
-        document.getElementById('article-selection').style.display = 'block';
-        document.getElementById('results').classList.add('hidden');
-        resultsElement.style.display = 'none';
-        resetGame();
-        updateSelectedArticleInfo();
+        console.log('显示文章选择区域');
+        
+        // 1. 显示文章选择区域
+        const articleSelection = document.querySelector('.article-selection');
+        const gamePlaySection = document.getElementById('game-play-section');
+        
+        if (articleSelection) {
+            articleSelection.style.display = 'block';
+        }
+        if (gamePlaySection) {
+            gamePlaySection.style.display = 'none';
+        }
+        
+        // 2. 隐藏结果区域
+        if (resultsElement) {
+            resultsElement.classList.add('hidden');
+            resultsElement.style.display = 'none';
+        }
+        
+        // 3. 重置游戏UI
+        resetGameUI();
+        
+        // 4. 更新按钮状态
+        if (startBtn) {
+            startBtn.disabled = false;
+            startBtn.innerHTML = '<i class="fas fa-play"></i> 开始游戏';
+        }
+        if (resetBtn) {
+            resetBtn.disabled = true;
+        }
+        
+        // 5. 显示提示文本
+        if (targetText) {
+            targetText.textContent = '请先选择文章，然后点击"开始游戏"按钮';
+        }
+        
+        console.log('文章选择区域已显示');
+    }
+
+    // 添加辅助函数：重置游戏UI但不重置文章选择
+    function resetGameUI() {
+        // 停止计时器
+        if (gameState.timerInterval) {
+            clearInterval(gameState.timerInterval);
+            gameState.timerInterval = null;
+        }
+        
+        // 重置部分游戏状态
+        gameState.isActive = false;
+        gameState.currentTime = 0;
+        gameState.totalErrors = 0;
+        gameState.typedLength = 0;
+        gameState.gameId = null;
+        
+        // 重置输入区域
+        if (inputArea) {
+            inputArea.value = '';
+            inputArea.disabled = true;
+        }
+        
+        // 重置统计显示
+        if (progressElement) progressElement.textContent = '0%';
+        if (errorsElement) errorsElement.textContent = '0';
+        if (speedElement) speedElement.textContent = '0';
+        if (accuracyElement) accuracyElement.textContent = '0%';
+        if (timerElement) timerElement.textContent = '0.00';
     }
 
     // 加载文章分类
@@ -136,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await fetch('/api/categories');
             if (!response.ok) throw new Error('加载分类失败');
-
+            
             const data = await response.json();
             console.log('文章分类加载成功:', data.categories);
         } catch (error) {
@@ -148,23 +290,23 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadArticles() {
         const category = categorySelect.value;
         articleList.innerHTML = '<div class="loading-articles"><i class="fas fa-spinner fa-spin"></i> 加载文章中...</div>';
-
+        
         try {
             const url = category ? `/api/articles?category=${encodeURIComponent(category)}` : '/api/articles';
             const response = await fetch(url);
-
+            
             if (!response.ok) throw new Error(`加载文章失败: ${response.status}`);
-
+            
             const data = await response.json();
             renderArticles(data.articles || []);
-
+            
             // 更新统计信息
             articleCount.textContent = data.total || 0;
-
+            
             // 计算总字符数
             const total = (data.articles || []).reduce((sum, article) => sum + (article.length || 0), 0);
             totalChars.textContent = total;
-
+            
         } catch (error) {
             console.error('加载文章时出错:', error);
             articleList.innerHTML = `<div class="error" style="text-align: center; padding: 20px; color: #ef4444;">加载失败: ${error.message}</div>`;
@@ -177,22 +319,22 @@ document.addEventListener('DOMContentLoaded', function() {
             articleList.innerHTML = '<div class="no-articles" style="text-align: center; padding: 20px; color: #94a3b8;">该分类下暂无文章</div>';
             return;
         }
-
+        
         articleList.innerHTML = '';
         articles.forEach((article, index) => {
             const articleItem = document.createElement('div');
             articleItem.className = 'article-item';
-
+            
             // 如果这篇文章是当前选中的，添加选中样式
             if (gameState.selectedArticle &&
                 gameState.selectedArticle.text === article.text) {
                 articleItem.classList.add('selected');
             }
-
+            
             // 截取文章预览
             const preview = article.text.substring(0, 60);
             const ellipsis = article.text.length > 60 ? '...' : '';
-
+            
             articleItem.innerHTML = `
                 <div class="article-content">${preview}${ellipsis}</div>
                 <div class="article-meta">
@@ -200,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span class="article-length">${article.length || article.text.length} 字符</span>
                 </div>
             `;
-
+            
             // 添加点击事件
             articleItem.addEventListener('click', function() {
                 selectArticle(article);
@@ -213,10 +355,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function selectArticle(article) {
         gameState.selectedArticle = article;
         gameState.selectedCategory = article.category || categorySelect.value || '自定义';
-
+        
         // 更新UI
         updateSelectedArticleInfo();
-
+        
         // 更新文章列表中的选中状态
         document.querySelectorAll('.article-item').forEach(item => {
             item.classList.remove('selected');
@@ -230,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 item.classList.add('selected');
             }
         });
-
+        
         console.log('已选择文章:', article.text.substring(0, 50) + '...');
     }
 
@@ -242,21 +384,21 @@ document.addEventListener('DOMContentLoaded', function() {
             customText.focus();
             return;
         }
-
+        
         if (text.length < 10) {
             alert('文章太短，至少需要10个字符');
             return;
         }
-
+        
         gameState.selectedArticle = {
             text: text,
             length: text.length,
             category: '自定义'
         };
         gameState.selectedCategory = '自定义';
-
+        
         updateSelectedArticleInfo();
-
+        
         // 可选：保存到服务器
         saveCustomArticle(text);
     }
@@ -269,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: text, category: '自定义' })
             });
-
+            
             if (response.ok) {
                 console.log('自定义文章保存成功');
             }
@@ -283,7 +425,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await fetch('/api/articles');
             if (!response.ok) throw new Error('加载文章失败');
-
+            
             const data = await response.json();
             if (data.articles && data.articles.length > 0) {
                 const randomIndex = Math.floor(Math.random() * data.articles.length);
@@ -307,20 +449,24 @@ document.addEventListener('DOMContentLoaded', function() {
         if (gameState.selectedArticle) {
             selectedCategory.textContent = gameState.selectedCategory;
             selectedLength.textContent = gameState.selectedArticle.length || gameState.selectedArticle.text.length;
-
+            
             // 预览文本（最多显示100字符）
             const previewText = gameState.selectedArticle.text;
             selectedPreview.textContent = previewText.substring(0, 100) +
                 (previewText.length > 100 ? '...' : '');
-
+            
             // 更新当前分类显示
-            currentCategory.querySelector('span').textContent = gameState.selectedCategory;
+            if (currentCategory) {
+                currentCategory.querySelector('span').textContent = gameState.selectedCategory;
+            }
             textLength.textContent = gameState.selectedArticle.length || gameState.selectedArticle.text.length;
         } else {
             selectedCategory.textContent = '随机';
             selectedLength.textContent = '0';
             selectedPreview.textContent = '未选择文章，将使用随机文章';
-            currentCategory.querySelector('span').textContent = '随机';
+            if (currentCategory) {
+                currentCategory.querySelector('span').textContent = '随机';
+            }
             textLength.textContent = '0';
         }
     }
@@ -330,22 +476,33 @@ document.addEventListener('DOMContentLoaded', function() {
     // 开始新游戏
     async function startGame() {
         console.log('开始新游戏...');
-
+        
         // 检查是否已有游戏在进行
         if (gameState.isActive) {
             alert('游戏正在进行中，请先完成或重置当前游戏');
             return;
         }
-
+        
+        // 在游戏开始时显示游戏区域
+        const articleSelection = document.querySelector('.article-selection');
+        const gamePlaySection = document.getElementById('game-play-section');
+        
+        if (articleSelection) {
+            articleSelection.style.display = 'none';
+        }
+        if (gamePlaySection) {
+            gamePlaySection.style.display = 'block';
+        }
+        
         try {
             // 显示加载状态
             startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 准备中...';
             startBtn.disabled = true;
             resetBtn.disabled = true;
-
+            
             let gameText;
             let gameCategory;
-
+            
             if (gameState.selectedArticle) {
                 gameText = gameState.selectedArticle.text;
                 gameCategory = gameState.selectedCategory;
@@ -368,9 +525,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     gameCategory = '示例';
                 }
             }
-
+            
             console.log('发送游戏开始请求...');
-
+            
             const response = await fetch('/api/start_game', {
                 method: 'POST',
                 headers: {
@@ -382,18 +539,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     category: gameCategory
                 })
             });
-
+            
             console.log('收到响应状态:', response.status);
-
+            
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('服务器返回错误:', response.status, errorText);
                 throw new Error(`服务器错误 (${response.status})`);
             }
-
+            
             const data = await response.json();
             console.log('游戏开始成功:', data);
-
+            
             // 更新游戏状态
             gameState.gameId = data.game_id || Date.now().toString();
             gameState.startTime = Date.now();
@@ -402,48 +559,49 @@ document.addEventListener('DOMContentLoaded', function() {
             gameState.totalErrors = 0;
             gameState.typedLength = 0;
             gameState.originalText = gameText;
-
+            
             // 更新UI
             targetText.textContent = gameText;
             targetText.innerHTML = gameText; // 清除可能的高亮
             inputArea.value = '';
             inputArea.disabled = false;
             inputArea.focus();
-
+            
             // 更新分类和长度显示
-            currentCategory.querySelector('span').textContent = gameCategory;
+            if (currentCategory) {
+                currentCategory.querySelector('span').textContent = gameCategory;
+            }
             textLength.textContent = gameText.length;
-
+            
             // 重置统计
             progressElement.textContent = '0%';
             errorsElement.textContent = '0';
             speedElement.textContent = '0';
             accuracyElement.textContent = '0%';
             timerElement.textContent = '0.00';
-
+            
             // 隐藏结果和文章选择
             resultsElement.classList.add('hidden');
             resultsElement.style.display = 'none';
-            document.getElementById('article-selection').style.display = 'none';
-
+            
             // 启用/禁用按钮
             startBtn.disabled = true;
             startBtn.innerHTML = '<i class="fas fa-play"></i> 游戏进行中...';
             resetBtn.disabled = false;
-
+            
             // 开始计时器
             startTimer();
-
+            
             console.log('游戏开始成功，gameId:', gameState.gameId);
-
+            
         } catch (error) {
             console.error('开始游戏时出错:', error);
-
+            
             // 恢复按钮状态
             startBtn.disabled = false;
             startBtn.innerHTML = '<i class="fas fa-play"></i> 开始游戏';
             resetBtn.disabled = true;
-
+            
             alert(`无法开始游戏: ${error.message}\n将使用本地模式进行游戏`);
             
             // 本地模式启动游戏
@@ -457,7 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         let gameText;
         let gameCategory;
-
+        
         if (gameState.selectedArticle) {
             gameText = gameState.selectedArticle.text;
             gameCategory = gameState.selectedCategory;
@@ -465,7 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
             gameText = '欢迎使用打字游戏！请在这里输入文本以开始练习。这是一个示例文本，用于测试打字速度和准确性。';
             gameCategory = '示例';
         }
-
+        
         // 更新游戏状态
         gameState.gameId = Date.now().toString();
         gameState.startTime = Date.now();
@@ -474,35 +632,36 @@ document.addEventListener('DOMContentLoaded', function() {
         gameState.totalErrors = 0;
         gameState.typedLength = 0;
         gameState.originalText = gameText;
-
+        
         // 更新UI
         targetText.textContent = gameText;
         targetText.innerHTML = gameText;
         inputArea.value = '';
         inputArea.disabled = false;
         inputArea.focus();
-
+        
         // 更新分类和长度显示
-        currentCategory.querySelector('span').textContent = gameCategory;
+        if (currentCategory) {
+            currentCategory.querySelector('span').textContent = gameCategory;
+        }
         textLength.textContent = gameText.length;
-
+        
         // 重置统计
         progressElement.textContent = '0%';
         errorsElement.textContent = '0';
         speedElement.textContent = '0';
         accuracyElement.textContent = '0%';
         timerElement.textContent = '0.00';
-
-        // 隐藏结果和文章选择
+        
+        // 隐藏结果
         resultsElement.classList.add('hidden');
         resultsElement.style.display = 'none';
-        document.getElementById('article-selection').style.display = 'none';
-
+        
         // 启用/禁用按钮
         startBtn.disabled = true;
         startBtn.innerHTML = '<i class="fas fa-play"></i> 游戏进行中...';
         resetBtn.disabled = false;
-
+        
         // 开始计时器
         startTimer();
     }
@@ -510,61 +669,54 @@ document.addEventListener('DOMContentLoaded', function() {
     // 重置游戏
     function resetGame() {
         console.log('重置游戏');
-
+        
         // 停止计时器
         if (gameState.timerInterval) {
             clearInterval(gameState.timerInterval);
             gameState.timerInterval = null;
         }
-
+        
         // 重置游戏状态
         gameState.isActive = false;
         gameState.currentTime = 0;
         gameState.totalErrors = 0;
         gameState.typedLength = 0;
-
+        // 保留 selectedArticle，以便"再玩一次"
+        
         // 重置UI
         inputArea.value = '';
         inputArea.disabled = true;
         
-        // 恢复目标文本为纯文本
-        if (gameState.originalText) {
+        // 如果有选中的文章，显示它；否则显示提示
+        if (gameState.selectedArticle && gameState.originalText) {
             targetText.textContent = gameState.originalText;
         } else {
-            targetText.textContent = '请选择文章后点击"开始游戏"按钮';
+            targetText.textContent = '请先选择文章，然后点击"开始游戏"按钮';
         }
-
-        // 重置统计
+        
+        // 重置统计显示
         progressElement.textContent = '0%';
         errorsElement.textContent = '0';
         speedElement.textContent = '0';
         accuracyElement.textContent = '0%';
         timerElement.textContent = '0.00';
-
-        // 隐藏结果
-        resultsElement.classList.add('hidden');
-        resultsElement.style.display = 'none';
-
-        // 恢复按钮状态
+        
+        // 更新按钮状态
         startBtn.disabled = false;
         startBtn.innerHTML = '<i class="fas fa-play"></i> 开始游戏';
         resetBtn.disabled = true;
-
-        // 更新分类和长度显示
-        currentCategory.querySelector('span').textContent = gameState.selectedArticle ? gameState.selectedCategory : '未开始';
-        textLength.textContent = gameState.selectedArticle ? (gameState.selectedArticle.length || gameState.selectedArticle.text.length) : '0';
     }
 
     // 处理输入
     async function handleInput() {
         if (!gameState.isActive) return;
-
+        
         const typedText = inputArea.value;
         const originalText = gameState.originalText;
-
+        
         // 更新已输入长度
         gameState.typedLength = typedText.length;
-
+        
         try {
             const response = await fetch('/api/check_progress', {
                 method: 'POST',
@@ -577,19 +729,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     typed_text: typedText
                 })
             });
-
+            
             if (response.ok) {
                 const data = await response.json();
                 
-                // 更新游戏状态
+                // 确保错误数量被正确更新
                 gameState.totalErrors = data.errors || gameState.totalErrors;
+                
+                // 立即更新UI显示
+                updateProgress(data);
                 
                 // 检查是否完成
                 if (data.completed || typedText.length >= originalText.length) {
                     console.log('游戏完成!', data);
                     finishGame(data);
-                } else {
-                    updateProgress(data);
                 }
                 
                 // 高亮显示文本
@@ -597,9 +750,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 
             } else {
                 // 如果API失败，使用本地计算
-                throw new Error('API请求失败');
+                console.log('API失败，使用本地计算');
+                updateProgressLocally(typedText, originalText);
+                highlightText(typedText, originalText);
+                
+                // 检查是否完成
+                if (typedText.length >= originalText.length) {
+                    console.log('游戏完成（本地计算）');
+                    finishGameLocally(typedText, originalText);
+                }
             }
-
+            
         } catch (error) {
             console.error('检查进度时出错，使用本地计算:', error);
             
@@ -621,7 +782,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const progress = Math.min(100, Math.round((typedText.length / originalText.length) * 100));
         
-        // 计算错误数
+        // 重新计算错误数（不依赖旧值）
         let errors = 0;
         const minLength = Math.min(typedText.length, originalText.length);
         
@@ -636,6 +797,7 @@ document.addEventListener('DOMContentLoaded', function() {
             errors += (typedText.length - originalText.length);
         }
         
+        // 更新游戏状态中的错误数
         gameState.totalErrors = errors;
         
         // 计算速度和准确率
@@ -655,6 +817,8 @@ document.addEventListener('DOMContentLoaded', function() {
         errorsElement.textContent = errors;
         speedElement.textContent = charsPerMinute;
         accuracyElement.textContent = `${accuracy}%`;
+        
+        console.log(`本地计算: 进度${progress}%, 错误${errors}, 准确率${accuracy}%`);
     }
 
     // 本地完成游戏
@@ -681,13 +845,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateProgress(data) {
         progressElement.textContent = `${data.progress || 0}%`;
         errorsElement.textContent = data.errors || 0;
-
+        
         // 计算实时速度
         if (gameState.currentTime > 0) {
             const typedLength = data.typed_length || gameState.typedLength;
             const charsPerMinute = Math.round((typedLength / gameState.currentTime) * 60);
             speedElement.textContent = charsPerMinute;
-
+            
             // 计算实时准确率
             if (typedLength > 0) {
                 const errors = data.errors || gameState.totalErrors;
@@ -701,12 +865,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function finishGame(data) {
         console.log('游戏完成，显示结果:', data);
         
-        // 确保游戏状态更新
-        if (!gameState.isActive) {
-            console.log('游戏已经结束，忽略重复调用');
-            return;
-        }
-        
         // 停止计时器
         if (gameState.timerInterval) {
             clearInterval(gameState.timerInterval);
@@ -715,33 +873,28 @@ document.addEventListener('DOMContentLoaded', function() {
         
         gameState.isActive = false;
         
-        // 更新最终结果
+        // 确保错误数量在结果中显示
+        const errors = data.errors || gameState.totalErrors || 0;
+        
+        // 更新最终结果显示
         finalTimeElement.textContent = `${data.elapsed_time || gameState.currentTime.toFixed(2)} 秒`;
         
-        const finalSpeed = data.chars_per_minute || 
+        const finalSpeed = data.chars_per_minute ||
             (gameState.currentTime > 0 ? Math.round((gameState.typedLength / gameState.currentTime) * 60) : 0);
         finalSpeedElement.textContent = `${finalSpeed} 字/分钟`;
         
-        const finalAccuracy = data.accuracy || 
-            (gameState.typedLength > 0 ? Math.round(((gameState.typedLength - gameState.totalErrors) / gameState.typedLength) * 100) : 0);
+        const finalAccuracy = data.accuracy ||
+            (gameState.typedLength > 0 ? Math.round(((gameState.typedLength - errors) / gameState.typedLength) * 100) : 0);
         finalAccuracyElement.textContent = `${finalAccuracy}%`;
         
-        // 确保有分类信息
-        if (finalCategory) {
-            finalCategory.textContent = data.category || gameState.selectedCategory || '随机';
+        // 显示错误数量
+        if (finalErrorsElement) {
+            finalErrorsElement.textContent = errors;
         }
         
-        // 显示结果面板 - 确保正确显示
+        // 显示结果面板
         resultsElement.classList.remove('hidden');
         resultsElement.style.display = 'block';
-        
-        // 添加庆祝动画
-        resultsElement.style.animation = 'celebrate 0.5s ease-in-out';
-        
-        // 滚动到结果区域
-        setTimeout(() => {
-            resultsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
         
         // 更新按钮状态
         startBtn.disabled = false;
@@ -749,18 +902,7 @@ document.addEventListener('DOMContentLoaded', function() {
         resetBtn.disabled = true;
         inputArea.disabled = true;
         
-        // 可选：保存成绩到排行榜
-        saveScoreToLeaderboard({
-            chars_per_minute: finalSpeed,
-            accuracy: finalAccuracy,
-            elapsed_time: data.elapsed_time || gameState.currentTime.toFixed(2),
-            category: data.category || gameState.selectedCategory || '随机'
-        });
-        
-        // 加载更新的排行榜
-        loadLeaderboard();
-        
-        console.log('结果面板已显示');
+        console.log('结果显示完成，错误数:', errors);
     }
 
     // 保存成绩到排行榜
@@ -800,7 +942,7 @@ document.addEventListener('DOMContentLoaded', function() {
         clearInterval(gameState.timerInterval);
         gameState.currentTime = 0;
         timerElement.textContent = '0.00';
-
+        
         gameState.timerInterval = setInterval(() => {
             gameState.currentTime += 0.1;
             timerElement.textContent = gameState.currentTime.toFixed(2);
@@ -864,18 +1006,18 @@ document.addEventListener('DOMContentLoaded', function() {
     function shareResults() {
         try {
             console.log('开始分享成绩...');
-
+            
             // 获取结果数据
             const finalTime = finalTimeElement.textContent;
             const finalSpeed = finalSpeedElement.textContent;
             const finalAccuracy = finalAccuracyElement.textContent;
-
+            
             // 获取分类信息
             let categoryInfo = '';
             if (finalCategory && finalCategory.textContent && finalCategory.textContent !== '随机') {
                 categoryInfo = `（分类：${finalCategory.textContent}）`;
             }
-
+            
             // 构建分享文本
             const shareText = `🎮 打字游戏成绩 🎮\n\n` +
                              `打字速度: ${finalSpeed}\n` +
@@ -884,17 +1026,17 @@ document.addEventListener('DOMContentLoaded', function() {
                              `${categoryInfo}\n\n` +
                              `你也来挑战吧！\n` +
                              `游戏地址: ${window.location.href}`;
-
+            
             console.log('分享文本:', shareText);
-
+            
             // 保存按钮原始状态
             const originalHtml = shareBtn.innerHTML;
             const originalText = shareBtn.textContent;
-
+            
             // 显示加载状态
             shareBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 复制中...';
             shareBtn.disabled = true;
-
+            
             // 复制到剪贴板
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(shareText).then(() => {
@@ -923,14 +1065,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     shareBtn.disabled = false;
                 }, 1500);
             }
-
+            
         } catch (error) {
             console.error('分享过程中出错:', error);
-
+            
             // 恢复按钮状态
             shareBtn.disabled = false;
             shareBtn.innerHTML = '<i class="fas fa-share-alt"></i> 分享成绩';
-
+            
             // 显示简单错误信息
             alert('分享失败，请手动复制成绩信息');
         }
@@ -959,11 +1101,11 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.appendChild(textArea);
         textArea.select();
         textArea.setSelectionRange(0, 99999); // 移动端支持
-
+        
         try {
             const successful = document.execCommand('copy');
             document.body.removeChild(textArea);
-
+            
             if (successful) {
                 alert('✅ 成绩已复制到剪贴板！\n\n现在可以粘贴分享了。');
             } else {
@@ -989,22 +1131,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // 加载排行榜
     async function loadLeaderboard() {
         console.log('加载排行榜数据...');
-
+        
         try {
             // 显示加载状态
             refreshLeaderboardBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 加载中...';
             refreshLeaderboardBtn.disabled = true;
-
+            
             const response = await fetch('/api/get_leaderboard');
-
+            
             if (!response.ok) {
                 throw new Error(`无法加载排行榜: ${response.status}`);
             }
-
+            
             const leaderboard = await response.json();
             console.log('排行榜数据:', leaderboard);
             renderLeaderboard(leaderboard);
-
+            
         } catch (error) {
             console.error('加载排行榜时出错:', error);
             
@@ -1062,12 +1204,12 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             return;
         }
-
+        
         leaderboardBody.innerHTML = '';
-
+        
         leaderboard.forEach((player, index) => {
             const row = document.createElement('tr');
-
+            
             // 为前三名添加特殊样式
             let rankClass = '';
             let rankEmoji = '';
@@ -1081,7 +1223,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 rankClass = 'third';
                 rankEmoji = '🥉 ';
             }
-
+            
             row.innerHTML = `
                 <td class="${rankClass}">${rankEmoji}${player.rank || index + 1}</td>
                 <td>${player.name || '匿名玩家'}</td>
@@ -1090,10 +1232,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${player.category || '随机'}</td>
                 <td>${player.date || '刚刚'}</td>
             `;
-
+            
             leaderboardBody.appendChild(row);
         });
-
+        
         // 添加排行榜样式
         ensureLeaderboardStyles();
     }
@@ -1164,7 +1306,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 添加样式动画
     ensureCelebrationAnimation();
-
+    
     function ensureCelebrationAnimation() {
         if (!document.getElementById('celebration-animation')) {
             const style = document.createElement('style');
