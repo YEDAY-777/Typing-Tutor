@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Python打字游戏 - 自由选择文章</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/game.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- 添加Google字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-keyboard"></i> Python打字游戏</h1>
+            <h1><i class="fas fa-keyboard"></i>打字游戏</h1>
             <p class="subtitle">自由选择文章，提升打字技能</p>
         </header>
 
@@ -167,7 +168,6 @@
                             <div class="result-label">准确率</div>
                             <div class="result-value" id="final-accuracy">0%</div>
                         </div>
-                        <!-- 新增：错误统计 -->
                         <div class="result-stat">
                             <div class="result-label">错误数</div>
                             <div class="result-value" id="final-errors">0</div>
@@ -204,6 +204,11 @@
                         </thead>
                         <tbody id="leaderboard-body">
                             <!-- 排行榜数据将通过JavaScript动态加载 -->
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 20px;">
+                                    <i class="fas fa-spinner fa-spin"></i> 加载排行榜中...
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -239,12 +244,13 @@
                     <li>练习常用单词和短语，提高肌肉记忆</li>
                     <li>定期休息，避免手部疲劳和重复性劳损</li>
                     <li>使用所有手指打字，而不是只用几个手指</li>
-                    <li>游戏中可以使用Ctrl+Enter快速开始，Esc重置</li>
+                    <li>练习时保持放松的姿势，手腕不要过度弯曲</li>
+                    <li>每天坚持练习15-30分钟，效果最好</li>
                 </ul>
             </div>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='game.js') }}"></script>
+   <script src="{{ url_for('static', filename='js/game.js') }}"></script>
 </body>
 </html>
